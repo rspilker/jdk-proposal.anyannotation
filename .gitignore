@@ -1,0 +1,11 @@
+/bin
+/build
+/dist
+/ivyCache
+/lib
+/.settings
+/.project
+/.classpath
+/.factorypath
+*.markdown.html
+/junit*.properties
