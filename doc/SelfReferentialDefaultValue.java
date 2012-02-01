@@ -5,7 +5,7 @@ import java.util.Arrays;
 @SelfRef
 public class SelfReferentialDefaultValue {
 	public static void main(String[] args) {
-		SelfRef ann = Test.class.getAnnotation(SelfRef.class);
+		SelfRef ann = SelfReferentialDefaultValue.class.getAnnotation(SelfRef.class);
 		System.out.println(ann.value());
 	}
 }
