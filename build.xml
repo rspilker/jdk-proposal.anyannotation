@@ -1,0 +1,155 @@
+<!--
+ Copyright (C) 2012 The Project Lombok Authors.
+  
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+  
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+-->
+<project name="anyannotation" default="dist" xmlns:ivy="antlib:com.zwitserloot.ivyplusplus">
+	<property name="build.compiler" value="javac1.6" />
+	<property name="ivy.retrieve.pattern" value="lib/[conf]/[artifact].[ext]" />
+	<property name="ivyplusplus.location" value="http://projectlombok.org/downloads/ivyplusplus.jar" />
+	<available file="lib/ivyplusplus.jar" property="ivyplusplus.available" />
+	
+	<path id="build.path">
+		<fileset dir="lib/build">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+	
+	<path id="runtime.path">
+		<fileset dir="lib/runtime">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+	
+	<target name="download-ipp" unless="ivyplusplus.available">
+		<mkdir dir="lib" />
+		<get src="${ivyplusplus.location}" dest="lib/ivyplusplus.jar" usetimestamp="true" />
+	</target>
+	
+	<target name="load-ipp" depends="download-ipp">
+		<taskdef classpath="lib/ivyplusplus.jar" resource="com/zwitserloot/ivyplusplus/antlib.xml" uri="antlib:com.zwitserloot.ivyplusplus" />
+		<ivy:ensureippversion version="1.7" property="ipp.versionOkay" />
+	</target>
+	
+	<target name="checkver-ipp" depends="load-ipp" unless="ipp.versionOkay">
+		<get src="${ivyplusplus.location}" dest="lib/ivyplusplus.jar" />
+		<fail>ivyplusplus has been updated to a new version. Restart the script to continue.</fail>
+	</target>
+	
+	<target name="ensure-ipp" depends="load-ipp, checkver-ipp" />
+	
+	<target name="config-ivy" depends="ensure-ipp" unless="ivy.config">
+		<ivy:configure file="buildScripts/ivysettings.xml" />
+		<property name="ivy.config" value="true" />
+	</target>
+	
+	<target name="deps" depends="ensureBuildDeps, ensureRuntimeDeps" description="Downloads all dependencies." />
+	
+	<target name="ensureBuildDeps" depends="config-ivy">
+		<mkdir dir="lib/build" />
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
+		<ivy:retrieve />
+	</target>
+	
+	<target name="ensureRuntimeDeps" depends="config-ivy">
+		<mkdir dir="lib/runtime" />
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="runtime" />
+		<ivy:retrieve />
+	</target>
+	
+	<target name="clean" description="Deletes build artifacts.">
+		<delete quiet="true" dir="dist" />
+		<delete quiet="true" dir="build" />
+	</target>
+	
+	<target name="distclean" depends="clean" description="Deletes everything this build script has ever generated.">
+		<delete dir="lib" quiet="true" />
+		<delete dir="dist" quiet="true" />
+		<delete file=".project" quiet="true" />
+		<delete file=".classpath" quiet="true" />
+		<delete dir=".settings" quiet="true" />
+		<delete dir=".idea" quiet="true" />
+		<delete file="anyannotation.iml" quiet="true" />
+	</target>
+	
+	<target name="compile" depends="ensureBuildDeps, -unpackLibs" description="Compiles program code.">
+		<ivy:compile destdir="build/main">
+			<src path="src/main" />
+			<classpath refid="build.path" />
+		</ivy:compile>
+	</target>
+	
+	<target name="-unpackLibs" depends="ensureRuntimeDeps">
+		<ivy:cachedunjar dest="build/main" marker="build/unpackDeps.marker">
+			<path refid="runtime.path" />
+		</ivy:cachedunjar>
+	</target>
+	
+	<target name="dist" depends="compile" description="Creates the distributable.">
+		<mkdir dir="dist" />
+		<taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask" classpath="lib/build/jarjar.jar" />
+		<jarjar destfile="dist/anyannotation.jar">
+			<rule pattern="org.objectweb.asm.**" result="lombok.anyannotation.libs.org.objectweb.asm.@1" />
+			<fileset dir=".">
+				<include name="README*" />
+			</fileset>
+			<fileset dir="build/main" />
+			<manifest>
+				<attribute name="Premain-Class" value="org.projectlombok.anyannotation.JavaPatcher" />
+				<attribute name="Can-Redefine-Classes" value="true" />
+			</manifest>
+		</jarjar>
+		<jar destfile="dist/anyannotation-sources.jar">
+			<fileset dir=".">
+				<include name="README*" />
+				<include name="doc/**" />
+				<include name="src/**" />
+				<include name="build.xml" />
+				<include name="buildScripts/**" />
+			</fileset>
+		</jar>
+	</target>
+	
+	<target name="contrib" depends="config-ivy" description="Downloads various non-crucial documentation, sources, etc that are useful when developing lombok.ast.">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="contrib" />
+		<ivy:retrieve />
+	</target>
+	
+	<target name="intellij" depends="deps, contrib" description="Creates intellij project files and downloads all dependencies. Open this directory as a project in IntelliJ after running this target.">
+		<ivy:intellijgen>
+			<conf name="build" sources="contrib" />
+			<module name="anyannotation" depends="build, test">
+				<srcdir dir="src/main" />
+			</module>
+			<settings>
+				<url url="http://projectlombok.org/downloads/lombok.intellij.settings" />
+			</settings>
+		</ivy:intellijgen>
+	</target>
+	
+	<target name="eclipse" depends="deps, contrib" description="Creates eclipse project files and downloads all dependencies. Open this directory as project in eclipse after running this target.">
+		<ivy:eclipsegen>
+			<srcdir dir="src/main" />
+			<conf name="build" sources="contrib" />
+			<settings>
+				<url url="http://projectlombok.org/downloads/lombok.eclipse.settings" />
+			</settings>
+		</ivy:eclipsegen>
+	</target>
+</project>

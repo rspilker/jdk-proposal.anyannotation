@@ -9,3 +9,4 @@
 /.factorypath
 *.markdown.html
 /junit*.properties
+*.class
