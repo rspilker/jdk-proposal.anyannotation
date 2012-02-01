@@ -7,7 +7,7 @@ for f in reflection/*.java
 do
 	BASENAME=${f%.*}
 	echo -n TESTING "$BASENAME"...
-	javac -J-javaagent:../dist/anyannotation.jar "$f" >"$BASENAME.compiler-result.actual"
+	javac -J-javaagent:../dist/anyannotation.jar "$f" &>"$BASENAME.compiler-result.actual"
 	if [ $? == 0 ]; then
 		if [ -f "$BASENAME.compiler-result.txt" ]; then
 			echo " FAIL: Compiler should have produced an error but did not."
