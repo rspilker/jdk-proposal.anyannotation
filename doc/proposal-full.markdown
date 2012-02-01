@@ -202,7 +202,7 @@ In com.sun.tools.javac.comp.Check:2267
 _based on [http://hg.openjdk.java.net/jdk7/jdk7/langtools/file/ce654f4ecfd8/src/share/classes/com/sun/tools/javac/comp/Check.java]()_
 
 		- if ((type.tsym.flags() & Flags.ANNOTATION) != 0) {
-		+ if ((type.tsym.flags() & Flags.ANNOTATION) != 0 || type.tsym == syms.annotationType.tsym) {
+		+ if ((type.tsym.flags() & Flags.ANNOTATION) != 0 ||  || types.isSameType(type, syms.annotationType)) {
 
 * javac checks that an annotation's parameter is type compatible with the annotation's declaration. It does this using an 'assignment compatible' check, which will work fine with `java.lang.annotation.Annotation` as return type of the annotation declaration member method. However, this check is entered using an `if` statement which needs to be expanded:
 
@@ -210,7 +210,7 @@ In com.sun.tools.javac.comp.Annotate:224
 _based on [http://hg.openjdk.java.net/jdk7/jdk7/langtools/file/ce654f4ecfd8/src/share/classes/com/sun/tools/javac/comp/Annotate.java]()_
 
 		- if ((expected.tsym.flags() & Flags.ANNOTATION) != 0) {
-		+ if ((expected.tsym.flags() & Flags.ANNOTATION) != 0 || expected.tsym == syms.annotationType.tsym) {
+		+ if ((expected.tsym.flags() & Flags.ANNOTATION) != 0 || types.isSameType(expected, syms.annotationType)) {
 
 * No other changes are required. The error message with key `invalid.annotation.member.type` may need to be expanded to explain that `Annotation` is also a legal type.
 
