@@ -1,13 +1,13 @@
 #!/bin/bash
 CURDIR=`pwd`
 cd `dirname $0`
+PASSED=0
+FAILED=0
 for f in reflection/*.java
 do
 	BASENAME=${f%.*}
 	echo -n TESTING "$BASENAME"...
 	javac -J-javaagent:../dist/anyannotation.jar "$f" >"$BASENAME.compiler-result.actual"
-	PASSED=0
-	FAILED=0
 	if [ $? == 0 ]; then
 		if [ -f "$BASENAME.compiler-result.txt" ]; then
 			echo " FAIL: Compiler should have produced an error but did not."
