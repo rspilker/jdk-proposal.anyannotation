@@ -221,7 +221,7 @@ public class Annotate {
             return new Attribute.Class(types,
                                        (((JCFieldAccess) tree).selected).type);
         }
-        if ((expected.tsym.flags() & Flags.ANNOTATION) != 0) {
+        if ((expected.tsym.flags() & Flags.ANNOTATION) != 0 || types.isSameType(expected, syms.annotationType)) {
             if (tree.getTag() != JCTree.ANNOTATION) {
                 log.error(tree.pos(), "annotation.value.must.be.annotation");
                 expected = syms.errorType;

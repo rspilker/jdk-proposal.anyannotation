@@ -26,18 +26,21 @@
 package com.sun.tools.javac.comp;
 
 import java.util.*;
-import java.util.Set;
 
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.jvm.*;
 import com.sun.tools.javac.tree.*;
+import com.sun.tools.javac.tree.JCTree.JCAnnotation;
+import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 import com.sun.tools.javac.util.List;
 
 import com.sun.tools.javac.tree.JCTree.*;
+import com.sun.tools.javac.code.Attribute.Array;
 import com.sun.tools.javac.code.Lint;
 import com.sun.tools.javac.code.Lint.LintCategory;
+import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.code.Type.*;
 import com.sun.tools.javac.code.Symbol.*;
 
@@ -2264,7 +2267,7 @@ public class Check {
         if (type.isPrimitive()) return;
         if (types.isSameType(type, syms.stringType)) return;
         if ((type.tsym.flags() & Flags.ENUM) != 0) return;
-        if ((type.tsym.flags() & Flags.ANNOTATION) != 0) return;
+        if ((type.tsym.flags() & Flags.ANNOTATION) != 0 || types.isSameType(type, syms.annotationType)) return;
         if (types.lowerBound(type).tsym == syms.classType.tsym) return;
         if (types.isArray(type) && !types.isArray(types.elemtype(type))) {
             validateAnnotationType(pos, types.elemtype(type));
@@ -2494,7 +2497,8 @@ public class Check {
             for (JCTree def : tree.defs) {
                 if (def.getTag() != JCTree.METHODDEF) continue;
                 JCMethodDecl meth = (JCMethodDecl)def;
-                checkAnnotationResType(meth.pos(), meth.restype.type);
+                checkAnnotationElementType(meth.pos(), meth.restype.type);
+                checkNonCyclicAnnotationDefaultValues(meth);
             }
         } finally {
             tree.sym.flags_field &= ~LOCKED;
@@ -2515,7 +2519,8 @@ public class Check {
                 Symbol s = e.sym;
                 if (s.kind != Kinds.MTH)
                     continue;
-                checkAnnotationResType(pos, ((MethodSymbol)s).type.getReturnType());
+                checkAnnotationElementType(pos, ((MethodSymbol)s).type.getReturnType());
+                checkNonCyclicAnnotationDefaultValues(pos, (MethodSymbol)s);
             }
         } finally {
             tsym.flags_field &= ~LOCKED;
@@ -2523,17 +2528,52 @@ public class Check {
         }
     }
 
-    void checkAnnotationResType(DiagnosticPosition pos, Type type) {
+    void checkAnnotationElementType(DiagnosticPosition pos, Type type) {
         switch (type.tag) {
         case TypeTags.CLASS:
             if ((type.tsym.flags() & ANNOTATION) != 0)
                 checkNonCyclicElementsInternal(pos, type.tsym);
             break;
         case TypeTags.ARRAY:
-            checkAnnotationResType(pos, types.elemtype(type));
+            checkAnnotationElementType(pos, types.elemtype(type));
             break;
         default:
             break; // int etc
+        }
+    }
+
+    private void checkNonCyclicAnnotationDefaultValues(JCMethodDecl meth) {
+        if (!isAnnotationType(meth.restype.type)) return;
+        if (meth.defaultValue == null) return;
+        meth.defaultValue.accept(new TreeScanner() {
+            @Override public void visitAnnotation(JCAnnotation tree) {
+                checkAnnotationElementType(tree.pos(), tree.type);
+                super.visitAnnotation(tree);
+            }
+        });
+    }
+
+    private void checkNonCyclicAnnotationDefaultValues(final DiagnosticPosition pos, MethodSymbol meth) {
+        if (!isAnnotationType(meth.type.getReturnType())) return;
+        if (meth.defaultValue == null) return;
+        if (meth.defaultValue.type.tag == TypeTags.ARRAY) {
+            for (Attribute a : ((Array)meth.defaultValue).values) {
+                checkAnnotationElementType(pos, a.type);
+            }
+        }
+        else {
+            checkAnnotationElementType(pos, meth.defaultValue.type);
+        }
+    }
+
+    private boolean isAnnotationType(Type type) {
+        switch (type.tag) {
+        case TypeTags.CLASS:
+            return types.isSameType(type, syms.annotationType);
+        case TypeTags.ARRAY:
+            return types.isSameType(types.elemtype(type), syms.annotationType);
+        default:
+            return false;
         }
     }
 
