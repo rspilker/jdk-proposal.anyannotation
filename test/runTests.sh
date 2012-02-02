@@ -51,6 +51,45 @@ do
 		fi
 	fi
 done
+
+javac -J-javaagent:../dist/anyannotation.jar jlModel/*.java
+echo -n "TESTING javax.lang.model. Compiling..."
+if [ $? != 0 ]; then
+	echo " FAIL: Compilation of tests failed."
+	FAILED=$[FAILED+1]
+else
+	echo " OK"
+	PASSED=$[PASSED+1]
+	for f in jlModel/Test*.java
+	do
+		BASENAME=${f%.*}
+		echo -n TESTING "$BASENAME"...
+		javac -J-javaagent:../dist/anyannotation.jar -cp . -processor jlModel.AnnotationProcessor "$f" &>"$BASENAME.compiler-result.actual"
+		diff -qaiBwN "$BASENAME.compiler-result.actual" "$BASENAME.compiler-result.txt" >/dev/null
+		if [ $? == 0 ]; then
+			echo " OK"
+			PASSED=$[PASSED+1]
+		else
+			echo " FAIL: Result of running annotation processor is not equal to expected result."
+			echo "Expected output:"
+			cat "$BASENAME.compiler-result.txt"
+			echo "Actual output:"
+			cat "$BASENAME.compiler-result.actual"
+			FAILED=$[FAILED+1]
+		fi
+	done
+fi
+
+echo -n "TESTING Compile of new-form annotation with processors enabled..."
+javac -J-javaagent:../dist/anyannotation.jar -cp . -AjlModel.silent -processor jlModel.AnnotationProcessor jlModel/*.java
+if [ $? != 0 ]; then
+	echo " FAIL: Compilation of new-form annotations with processors enabled failed."
+	FAILED=$[FAILED+1]
+else
+	echo " OK"
+	PASSED=$[PASSED+1]
+fi
+
 echo "tests passed: $PASSED"
 if [ $FAILED != 0 ]; then
 	echo "TESTS FAILED: $FAILED"
