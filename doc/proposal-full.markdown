@@ -12,9 +12,10 @@ This proposal addresses the lack of this feature. It also moves java closer towa
 
 ## Authors
 
-* Reinier Zwitserloot (reinier@projectlombok.org)
-* Roel Spilker (roel@projectlombok.org)
-* Sander Koning (sander@projectlombok.org)
+* Reinier Zwitserloot (r.zwitserloot@projectlombok.org)
+* Roel Spilker (r.spilker@projectlombok.org)
+* Sander Koning (s.koning@projectlombok.org)
+* Robbert Jan Grootjans (r.grootjans@projectlombok.org)
 
 ## Try it right now!
 
