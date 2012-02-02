@@ -136,6 +136,7 @@
 			<conf name="build" sources="contrib" />
 			<module name="anyannotation" depends="build, test">
 				<srcdir dir="src/main" />
+				<srcdir dir="patchedJavac" />
 			</module>
 			<settings>
 				<url url="http://projectlombok.org/downloads/lombok.intellij.settings" />
@@ -146,6 +147,7 @@
 	<target name="eclipse" depends="deps, contrib" description="Creates eclipse project files and downloads all dependencies. Open this directory as project in eclipse after running this target.">
 		<ivy:eclipsegen>
 			<srcdir dir="src/main" />
+			<srcdir dir="patchedJavac" />
 			<conf name="build" sources="contrib" />
 			<settings>
 				<url url="http://projectlombok.org/downloads/lombok.eclipse.settings" />
