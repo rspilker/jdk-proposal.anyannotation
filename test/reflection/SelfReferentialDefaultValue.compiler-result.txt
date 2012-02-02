@@ -1,0 +1,4 @@
+SelfReferentialDefaultValue.java:15: cyclic annotation element type
+	Annotation value() default @SelfRef;
+	           ^
+1 error
