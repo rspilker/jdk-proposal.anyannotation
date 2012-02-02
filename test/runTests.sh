@@ -3,6 +3,13 @@ CURDIR=`pwd`
 cd `dirname $0`
 PASSED=0
 FAILED=0
+
+if [ ! -f ../dist/anyannotation.jar ]; then
+	echo "CANT RUN TESTS: First compile the live patcher by running 'ant dist' from the project's home directory."
+	cd "$CURDIR"
+	exit 2
+fi
+
 for f in reflection/*.java
 do
 	BASENAME=${f%.*}
