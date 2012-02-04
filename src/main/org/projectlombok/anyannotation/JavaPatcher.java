@@ -21,28 +21,9 @@
  */
 package org.projectlombok.anyannotation;
 
-import static com.sun.tools.javac.code.Flags.*;
-
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-
-import com.sun.tools.javac.code.Attribute;
-import com.sun.tools.javac.code.Kinds;
-import com.sun.tools.javac.code.Scope;
-import com.sun.tools.javac.code.Symbol;
-import com.sun.tools.javac.code.Type;
-import com.sun.tools.javac.code.TypeTags;
-import com.sun.tools.javac.code.Attribute.Array;
-import com.sun.tools.javac.code.Symbol.MethodSymbol;
-import com.sun.tools.javac.code.Symbol.TypeSymbol;
-import com.sun.tools.javac.tree.JCTree;
-import com.sun.tools.javac.tree.TreeScanner;
-import com.sun.tools.javac.tree.JCTree.JCAnnotation;
-import com.sun.tools.javac.tree.JCTree.JCClassDecl;
-import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
-import com.sun.tools.javac.util.Assert;
-import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 
 import lombok.patcher.Hook;
 import lombok.patcher.MethodTarget;
@@ -84,6 +65,7 @@ public class JavaPatcher {
 				.target(new MethodTarget("com.sun.tools.javac.comp.Attr", "attribClassBody"))
 				.methodToReplace(new Hook("com.sun.tools.javac.comp.Check", "checkNonCyclicElements", "void", "com.sun.tools.javac.tree.JCTree$JCClassDecl"))
 				.replacementMethod(new Hook("org.projectlombok.anyannotation.JavaPatcher", "fixCheckNonCyclicElements", "void", "java.lang.Object", "java.lang.Object"))
+				.transplant()
 				.build());
 	}
 	

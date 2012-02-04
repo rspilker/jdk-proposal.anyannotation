@@ -88,11 +88,24 @@
 		<delete file="anyannotation.iml" quiet="true" />
 	</target>
 	
-	<target name="compile" depends="ensureBuildDeps, -unpackLibs" description="Compiles program code.">
-		<ivy:compile destdir="build/main">
+	<target name="compile" depends="ensureBuildDeps, -unpackLibs" description="Compiles live agent code.">
+		<ivy:compile destdir="build/main" source="1.6" target="1.6" compiler="javac1.7">
 			<src path="src/main" />
 			<classpath refid="build.path" />
 		</ivy:compile>
+	</target>
+	
+	<target name="patchedJavacCompile" depends="ensureBuildDeps" description="Compiles patches.">
+		<javac includeAntRuntime="false" compiler="javac1.7" srcdir="patchedJavac" destdir="patchedJavac" source="1.7" target="1.7">
+			<include name="**/*.java" />
+			<classpath refid="build.path" />
+		</javac>
+	</target>
+	
+	<target name="test" depends="patchedJavacCompile, dist" description="Runs test script. Requires posixy environment.">
+		<exec executable="/bin/bash" dir="test">
+			<arg line="./runTests.sh" />
+		</exec>
 	</target>
 	
 	<target name="-unpackLibs" depends="ensureRuntimeDeps">
