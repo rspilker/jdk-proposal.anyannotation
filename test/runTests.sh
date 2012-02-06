@@ -2,22 +2,21 @@
 CURDIR=`pwd`
 cd `dirname $0`
 
-JAVA6HOME=/System/Library/Frameworks/JavaVM.framework/Versions/1.6/Home
-JAVA7HOME=/Library/Java/JavaVirtualMachines/1.7.0.jdk/Contents/Home
-#JAVA6HOME=.
-#JAVA7HOME=.
+#JAVA7HOME=/path/to/jdk7/home
 
 TPASSED=0
 TFAILED=0
+JAVA_BASE=""
+
 
 function sanityCheck() {
 	FUNFAIL=0
-	if [ "$JAVA6HOME" = "" ]; then
-		echo "WARNING: Please define JAVA6HOME at the top of this script file before running the tests."
-		FUNFAIL=1
-	fi
-	if [ "$JAVA7HOME" = "" ]; then
-		echo "WARNING: Please define JAVA7HOME at the top of this script file before running the tests."
+	if [ "$JAVA7HOME" != "" ]; then
+		JAVA_BASE=$JAVA7HOME
+	elif [ "$JAVA_HOME" != "" ]; then
+		JAVA_BASE=$JAVA_HOME
+	else
+		echo "WARNING: Please define JAVA7HOME (or JAVA_HOME) before running the tests."
 		FUNFAIL=1
 	fi
 	if [ ! -f ../dist/anyannotation.jar ]; then
@@ -25,6 +24,14 @@ function sanityCheck() {
 		cd "$CURDIR"
 		exit 2
 	fi
+	
+	$JAVA_BASE/bin/javac -version 2>&1 |grep -q 1.7
+	
+	if [ $? == 1 ]; then
+		FUNFAIL=1
+		echo "WARNING: Your javac's version is not 1.7 but " `$JAVA_BASE/bin/javac -version 2>&1` ' - the tests will probably fail!'
+	fi
+	
 	if [ $FUNFAIL -eq 0 ]; then
 		true
 	else
@@ -157,28 +164,15 @@ SCRIPTFAIL=0
 
 sanityCheck || SCRIPTFAIL=1
 
-if [ "$JAVA7HOME" != "" ]; then
-	echo "TEST : java reflection : java7  : hg patch"
-	testReflection "$JAVA7HOME/bin/javac -J-Xbootclasspath/p:../patchedJavac:../lib/build/javac7.jar" "$JAVA7HOME/bin/java -javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
-	echo "TEST : java reflection : java7  : live agent"
-	testReflection "$JAVA7HOME/bin/javac -J-javaagent:../dist/anyannotation.jar" "$JAVA7HOME/bin/java -javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
-fi
-if [ "$JAVA6HOME" != "" ]; then
-	echo "TEST : java reflection : java6  : live agent"
-	testReflection "$JAVA6HOME/bin/javac -J-javaagent:../dist/anyannotation.jar" "$JAVA6HOME/bin/java -javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
-fi
+echo "TEST : java reflection : java7  : hg patch"
+testReflection "$JAVA_BASE/bin/javac -J-Xbootclasspath/p:../patchedJavac:../lib/build/javac7.jar" "$JAVA_BASE/bin/java -javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
+echo "TEST : java reflection : java7  : live agent"
+testReflection "$JAVA_BASE/bin/javac -J-javaagent:../dist/anyannotation.jar" "$JAVA_BASE/bin/java -javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
 
-if [ "$JAVA7HOME" != "" ]; then
-	echo "TEST : java.lang.Model : javac7 : hg patch"
-	testJlModel "$JAVA7HOME/bin/javac -J-Xbootclasspath/p:../patchedJavac:../lib/build/javac7.jar" || SCRIPTFAIL=1
-	echo "TEST : java.lang.Model : javac7 : live agent"
-	testJlModel "$JAVA7HOME/bin/javac -J-javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
-fi
-
-if [ "$JAVA6HOME" != "" ]; then
-	echo "TEST : java.lang.Model : javac6 : live agent"
-	testJlModel "$JAVA6HOME/bin/javac -J-javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
-fi
+echo "TEST : java.lang.Model : javac7 : hg patch"
+testJlModel "$JAVA_BASE/bin/javac -J-Xbootclasspath/p:../patchedJavac:../lib/build/javac7.jar" || SCRIPTFAIL=1
+echo "TEST : java.lang.Model : javac7 : live agent"
+testJlModel "$JAVA_BASE/bin/javac -J-javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
 
 echo "total passed: $TPASSED"
 if [ $TFAILED -ne 0 ]; then

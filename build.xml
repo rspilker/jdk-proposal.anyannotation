@@ -125,8 +125,7 @@
 			<globmapper from="*.class" to="*.class.rpl" />
 		</copy>
 		<taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask" classpath="lib/build/jarjar.jar" />
-		<jarjar destfile="dist/anyannotation.jar">
-			<rule pattern="org.objectweb.asm.**" result="lombok.anyannotation.libs.org.objectweb.asm.@1" />
+		<jar destfile="dist/anyannotation.jar">
 			<fileset dir=".">
 				<include name="README*" />
 			</fileset>
@@ -136,7 +135,7 @@
 				<attribute name="Premain-Class" value="org.projectlombok.anyannotation.JavaPatcher" />
 				<attribute name="Can-Redefine-Classes" value="true" />
 			</manifest>
-		</jarjar>
+		</jar>
 		<jar destfile="dist/anyannotation-sources.jar">
 			<fileset dir=".">
 				<include name="README*" />
