@@ -182,7 +182,7 @@ _based on [Revision 9b8c96f96a0f of AnnotationParser.java][AnnotationParser]_
 
 * method `parseMemberValue` does NOT provide the expected type (parameter `memberType`) to the `parseAnnotation` helper method. Therefore, the fact that expected type is a previously invalid value (`java.lang.annotation.Annotation`) does not have any effect on parsing the annotation in the class file data.
 
-* method `parseSig` does not check if the provided type is an annotation type. (It really can't, as the type is not guaranteed to be on the classpath, and therefore it has no way of knowing if the provided type is actually an annotation type. Nevertheless, the code does indeed includes no such check).
+* method `parseSig` does not check if the provided type is an annotation type. (It really can't, as the type is not guaranteed to be on the classpath, and therefore it has no way of knowing if the provided type is actually an annotation type. Nevertheless, the code does indeed include no such check).
 
 * method 'parseArray' (helper of `parseMemberValue`) contains an assertion (which can be enabled with the `-esa` javac option) on line 485 which needs updating:
 
@@ -288,15 +288,15 @@ _based on [Revision ce654f4ecfd8 of Annotate.java][Annotate]_
 
 * No other changes are required. The error message with key `invalid.annotation.member.type` may need to be expanded to explain that `Annotation` is also a legal type.
 
-### Changes to javax.lang.model: Many changes needed
+### Changes to javax.lang.model: Some changes needed
 
 * javax.lang.model mostly requires no changes, except for the feature where one can ask javax.lang.model to create an instance of a given annotation class, i.e.:
 
-	for (Element elem : roundEnv.getRootElements()) {
-		SomeAnnotation instanceOfAnnotation = elem.getAnnotation(SomeAnnotation.class);
-	}
+		for (Element elem : roundEnv.getRootElements()) {
+			SomeAnnotation instanceOfAnnotation = elem.getAnnotation(SomeAnnotation.class);
+		}
 
-The implementation of this feature on OpenJDK's javac obtains `java.lang.Class` instances (needed to create the proxies) entirely from traversing `SomeAnnotation.class` using reflection. As the return types of the methods in `SomeAnnotation.class` would be `java.lang.annotation.Annotation`, this mechanism is no longer useful. Instead, the 'flat name' of the annotation argument itself needs to be turned into a `java.lang.Class` by using `Class.forName()`. Also, it is now possible for an annotation argument to contain an annotation that is not on the classpath of the annotation processor. The right approach is for this annotation instance to throw a `TypeMirrorException` as late as is feasible (when the annotation method is invoked that would have to return an instance of a type that is not available, but not when i.e. `toString()` is invoked). A full patch to the appropriate class is listed here:
+The implementation of this feature in OpenJDK's javac obtains `java.lang.Class` instances (needed to create the proxies) entirely from traversing `SomeAnnotation.class` using reflection. As the return types of the methods in `SomeAnnotation.class` would be `java.lang.annotation.Annotation`, this mechanism is no longer useful. Instead, the 'flat name' of the annotation argument itself needs to be turned into a `java.lang.Class` by using `Class.forName()`. Also, it is now possible for an annotation argument to contain an annotation that is not on the classpath of the annotation processor. The right approach is for this annotation instance to throw a `TypeMirrorException` as late as is feasible (when the annotation method is invoked that would have to return an instance of a type that is not available, but not when i.e. `toString()` is invoked). A full patch to the appropriate class is listed here (note that the alternate strategy of using `Class.forName` is only used for the new feature; existing annotations that do not use it are still created by traversing the annototation type via reflection):
 
 In com.sun.tools.javac.model.AnnotationProxyMaker
 _based on [Revision ce654f4ecfd8 of AnnotationProxyMaker.java][AnnotationProxyMaker]_
@@ -370,7 +370,7 @@ Technically, it is possible for existing annotations to be 'widened' - any retur
 
 ## Use cases for this feature
 
-One obvious use case for annotations is generating code. If this feature is added to the JDK, its possible to specify a list of annotations that should be put in the generated code. For example, an annotation that will generate a POJO with implementations for `equals`, `hashCode`, etcetera:
+One obvious use case for annotations is generating code. If this feature is added to the JDK, it is possible to specify a list of annotations that should be put in the generated code. For example, an annotation that will generate a POJO with implementations for `equals`, `hashCode`, et cetera:
 
 	@GeneratePOJO
 	@AddAnnotations(onClass=@SuppressWarnings("all"))
@@ -379,7 +379,7 @@ One obvious use case for annotations is generating code. If this feature is adde
 		private int unid;
 	}
 
-This feature also takes a step towards allowing hierarchical annotation definitions (where an annotation extends another annotation type, instead of `java.lang.annotation.Annotation`).
+This feature also takes a step towards allowing hierarchical annotation definitions (where an annotation extends another annotation type, instead of `java.lang.annotation.Annotation`.
 
 ## Testing the feature
 
