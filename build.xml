@@ -125,7 +125,6 @@
 	
 	<target name="dist" depends="compile" description="Creates the distributable.">
 		<mkdir dir="dist" />
-		<mkdir dir="build/replacements" />
 		<mkdir dir="build/replacements/replacements" />
 		<copy todir="build/replacements/replacements">
 			<fileset dir="patchedJavac">
@@ -184,5 +183,36 @@
 				<url url="http://projectlombok.org/downloads/lombok.eclipse.settings" />
 			</settings>
 		</ivy:eclipsegen>
+	</target>
+	
+	<target name="createJavacPatch" description="Creates a patch file for javac">
+		<mkdir dir="build/original/com/sun/tools/javac/comp/"/>
+		<mkdir dir="build/original/com/sun/tools/javac/model/"/>
+		<mkdir dir="build/patch/comp/"/>
+		<mkdir dir="build/patch/model/"/>
+		<get 
+			src="http://hg.openjdk.java.net/jdk7/jdk7/langtools/raw-file/6762754eb7c0/src/share/classes/com/sun/tools/javac/comp/Annotate.java"
+			dest="build/original/com/sun/tools/javac/comp/"
+			skipexisting="true"
+		/>
+		<get 
+			src="http://hg.openjdk.java.net/jdk7/jdk7/langtools/raw-file/6762754eb7c0/src/share/classes/com/sun/tools/javac/comp/Check.java"
+			dest="build/original/com/sun/tools/javac/comp/"
+			skipexisting="true"
+		/>
+		<get 
+			src="http://hg.openjdk.java.net/jdk7/jdk7/langtools/raw-file/6762754eb7c0/src/share/classes/com/sun/tools/javac/model/AnnotationProxyMaker.java"
+			dest="build/original/com/sun/tools/javac/model/"
+			skipexisting="true"
+		/>
+		<exec executable="diff" output="build/patch/comp/Annotate.patch">
+			<arg line="build/original/com/sun/tools/javac/comp/Annotate.java patchedJavac/com/sun/tools/javac/comp/Annotate.java" />
+		</exec>
+		<exec executable="diff" output="build/patch/comp/Check.patch">
+			<arg line="build/original/com/sun/tools/javac/comp/Check.java patchedJavac/com/sun/tools/javac/comp/Check.java" />
+		</exec>
+		<exec executable="diff" output="build/patch/model/AnnotationProxyMaker.patch">
+			<arg line="build/original/com/sun/tools/javac/model/AnnotationProxyMaker.java patchedJavac/com/sun/tools/javac/model/AnnotationProxyMaker.java" />
+		</exec>
 	</target>
 </project>
