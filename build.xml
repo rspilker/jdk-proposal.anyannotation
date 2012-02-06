@@ -37,6 +37,12 @@
 		</fileset>
 	</path>
 	
+	<path id="filesToPatch">
+		<fileset dir="patchedJavac">
+			<include name="**/*.class" />
+		</fileset>
+	</path>
+	
 	<target name="download-ipp" unless="ivyplusplus.available">
 		<mkdir dir="lib" />
 		<get src="${ivyplusplus.location}" dest="lib/ivyplusplus.jar" usetimestamp="true" />
@@ -124,6 +130,8 @@
 			</fileset>
 			<globmapper from="*.class" to="*.class.rpl" />
 		</copy>
+		<property name="filesToPatch.txt" refid="filesToPatch" />
+		<echo file="build/replacements/replacements/classesToPatch_anyannotation.txt">${filesToPatch.txt}</echo>
 		<taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask" classpath="lib/build/jarjar.jar" />
 		<jar destfile="dist/anyannotation.jar">
 			<fileset dir=".">

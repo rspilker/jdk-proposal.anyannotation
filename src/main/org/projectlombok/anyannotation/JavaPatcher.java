@@ -28,66 +28,55 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.security.ProtectionDomain;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class JavaPatcher {
-	private static final List<String> REPLACEMENTS = Collections.unmodifiableList(Arrays.asList(
-			"com/sun/tools/javac/comp/Annotate$Annotator",
-			"com/sun/tools/javac/comp/Annotate",
-			"com/sun/tools/javac/comp/Check$1",
-			"com/sun/tools/javac/comp/Check$1AnnotationValidator",
-			"com/sun/tools/javac/comp/Check$1SpecialTreeVisitor",
-			"com/sun/tools/javac/comp/Check$2",
-			"com/sun/tools/javac/comp/Check$3",
-			"com/sun/tools/javac/comp/Check$4",
-			"com/sun/tools/javac/comp/Check$5",
-			"com/sun/tools/javac/comp/Check$6",
-			"com/sun/tools/javac/comp/Check$ClashFilter",
-			"com/sun/tools/javac/comp/Check$ConversionWarner",
-			"com/sun/tools/javac/comp/Check$CycleChecker",
-			"com/sun/tools/javac/comp/Check$Validator",
-			"com/sun/tools/javac/comp/Check",
-			"com/sun/tools/javac/model/AnnotationProxyMaker$MirroredTypeExceptionProxy",
-			"com/sun/tools/javac/model/AnnotationProxyMaker$MirroredTypeExceptionProxy",
-			"com/sun/tools/javac/model/AnnotationProxyMaker$MirroredTypesExceptionProxy",
-			"com/sun/tools/javac/model/AnnotationProxyMaker$ValueVisitor$1AnnotationTypeMismatchExceptionProxy",
-			"com/sun/tools/javac/model/AnnotationProxyMaker$ValueVisitor",
-			"com/sun/tools/javac/model/AnnotationProxyMaker"
-			));
+	private static byte[] readFile(InputStream in) {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		try {
+			try {
+				byte[] b = new byte[65536];
+				while (true) {
+					int r = in.read(b);
+					if (r == -1) break;
+					baos.write(b, 0, r);
+				}
+			} finally {
+				in.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		} catch (RuntimeException e) {
+			e.printStackTrace();
+			throw e;
+		}
+		
+		return baos.toByteArray();
+	}
+	
+	
+	private static final Pattern CLASS_NAME_FINDER = Pattern.compile("^.*/patchedJavac/(.*)\\.class$");
+	
 	public static void premain(String agentArgs, Instrumentation instrumentation) throws Throwable {
+		InputStream in = JavaPatcher.class.getResourceAsStream("/replacements/classesToPatch_anyannotation.txt");
+		final List<String> classesToReplace = new ArrayList<String>();
+		for (String elem : new String(readFile(in), "US-ASCII").split("[:;]")) {
+			Matcher m = CLASS_NAME_FINDER.matcher(elem);
+			if (m.matches()) classesToReplace.add(m.group(1));
+		}
+		
 		class ReplaceClassesTransformer implements ClassFileTransformer {
 			@Override public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-				if (!REPLACEMENTS.contains(className)) return null;
+				if (!classesToReplace.contains(className)) return null;
 				InputStream in = JavaPatcher.class.getResourceAsStream("/replacements/" + className + ".class.rpl");
 				if (in == null) return null;
-				return readReplacement(in);
+				return readFile(in);
 			}
 			
-			private byte[] readReplacement(InputStream in) {
-				ByteArrayOutputStream baos = new ByteArrayOutputStream();
-				try {
-					try {
-						byte[] b = new byte[65536];
-						while (true) {
-							int r = in.read(b);
-							if (r == -1) break;
-							baos.write(b, 0, r);
-						}
-					} finally {
-						in.close();
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-					throw new RuntimeException(e);
-				} catch (RuntimeException e) {
-					e.printStackTrace();
-					throw e;
-				}
-				
-				return baos.toByteArray();
-			}
 		}
 		
 		instrumentation.addTransformer(new ReplaceClassesTransformer());
