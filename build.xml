@@ -116,6 +116,14 @@
 	
 	<target name="dist" depends="compile" description="Creates the distributable.">
 		<mkdir dir="dist" />
+		<mkdir dir="build/replacements" />
+		<mkdir dir="build/replacements/replacements" />
+		<copy todir="build/replacements/replacements">
+			<fileset dir="patchedJavac">
+				<include name="**/*.class" />
+			</fileset>
+			<globmapper from="*.class" to="*.class.rpl" />
+		</copy>
 		<taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask" classpath="lib/build/jarjar.jar" />
 		<jarjar destfile="dist/anyannotation.jar">
 			<rule pattern="org.objectweb.asm.**" result="lombok.anyannotation.libs.org.objectweb.asm.@1" />
@@ -123,6 +131,7 @@
 				<include name="README*" />
 			</fileset>
 			<fileset dir="build/main" />
+			<fileset dir="build/replacements" />
 			<manifest>
 				<attribute name="Premain-Class" value="org.projectlombok.anyannotation.JavaPatcher" />
 				<attribute name="Can-Redefine-Classes" value="true" />
