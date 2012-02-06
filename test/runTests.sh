@@ -48,7 +48,7 @@ function testReflection() {
 				FAILED=$[FAILED+1]
 				TFAILED=$[TFAILED+1]
 			else
-				java -javaagent:../dist/anyannotation.jar -cp . reflection.`basename $BASENAME` &>"$BASENAME.result.actual"
+				$2 -javaagent:../dist/anyannotation.jar -cp . reflection.`basename $BASENAME` &>"$BASENAME.result.actual"
 				diff -qaiBwN "$BASENAME.result.actual" "$BASENAME.result.txt" >/dev/null
 				if [ $? == 0 ]; then
 					echo " OK"

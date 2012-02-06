@@ -4,10 +4,12 @@
 		<conf name="build" />
 		<conf name="runtime" />
 		<conf name="contrib" />
+		<conf name="javac6" />
 	</configurations>
 	<dependencies>
 		<dependency org="org.projectlombok" name="lombok.patcher" rev="0.6" conf="build->default; runtime->default" />
 		<dependency org="com.googlecode.jarjar" name="jarjar" rev="1.1" conf="build->default" />
 		<dependency org="net.java.openjdk.custom" name="javac7" rev="1.7.0" conf="build->runtime; contrib->sources" />
+		<dependency org="net.java.openjdk.custom" name="javac6" rev="1.6.0.18" conf="javac6->runtime; contrib->sources" />
 	</dependencies>
 </ivy-module>

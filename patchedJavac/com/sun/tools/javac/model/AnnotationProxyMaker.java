@@ -199,6 +199,7 @@ public class AnnotationProxyMaker {
                                                         .isInstance(value)) {
                 typeMismatch(method, attr);
             }
+            
             return value;
         }
 

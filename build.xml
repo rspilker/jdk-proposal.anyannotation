@@ -96,7 +96,7 @@
 	</target>
 	
 	<target name="patchedJavacCompile" depends="ensureBuildDeps" description="Compiles patches.">
-		<javac includeAntRuntime="false" compiler="javac1.7" srcdir="patchedJavac" destdir="patchedJavac" source="1.7" target="1.7">
+		<javac includeAntRuntime="false" compiler="javac1.7" srcdir="patchedJavac" destdir="patchedJavac" source="1.6" target="1.6" debug="true">
 			<include name="**/*.java" />
 			<classpath refid="build.path" />
 		</javac>
@@ -140,7 +140,7 @@
 	</target>
 	
 	<target name="contrib" depends="config-ivy" description="Downloads various non-crucial documentation, sources, etc that are useful when developing lombok.ast.">
-		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="contrib" />
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="contrib, javac6" />
 		<ivy:retrieve />
 	</target>
 	
