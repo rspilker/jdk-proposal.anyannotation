@@ -68,6 +68,7 @@ public class JavaPatcher {
 				.target(new MethodTarget("com.sun.tools.javac.comp.Attr", "attribClassBody"))
 				.methodToReplace(new Hook("com.sun.tools.javac.comp.Check", "checkNonCyclicElements", "void", "com.sun.tools.javac.tree.JCTree$JCClassDecl"))
 				.replacementMethod(new Hook("org.projectlombok.anyannotation.JavaPatcher", "fixCheckNonCyclicElements", "void", "java.lang.Object", "java.lang.Object"))
+				.transplant()
 				.build());
 	}
 	

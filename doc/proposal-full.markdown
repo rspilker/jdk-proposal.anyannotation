@@ -205,6 +205,10 @@ _based on [http://hg.openjdk.java.net/jdk7/jdk7/langtools/file/ce654f4ecfd8/src/
 		- if ((type.tsym.flags() & Flags.ANNOTATION) != 0) {
 		+ if ((type.tsym.flags() & Flags.ANNOTATION) != 0 ||  || types.isSameType(type, syms.annotationType)) {
 
+* Loop detector [TODO]
+
+* The error message with key 'cyclic.annotation.element' doesn't need changing.
+
 * javac checks that an annotation's parameter is type compatible with the annotation's declaration. It does this using an 'assignment compatible' check, which will work fine with `java.lang.annotation.Annotation` as return type of the annotation declaration member method. However, this check is entered using an `if` statement which needs to be expanded:
 
 In com.sun.tools.javac.comp.Annotate:224

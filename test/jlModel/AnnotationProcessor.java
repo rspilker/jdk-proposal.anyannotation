@@ -9,17 +9,21 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 
 @SupportedAnnotationTypes("*")
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
 @SupportedOptions("jlModel.silent")
 public class AnnotationProcessor extends AbstractProcessor {
 	private boolean beSilent = false;
 	@Override public synchronized void init(ProcessingEnvironment processingEnv) {
 		beSilent = processingEnv.getOptions().containsKey("jlModel.silent");
+	}
+	
+	@Override public SourceVersion getSupportedSourceVersion() {
+		return SourceVersion.latestSupported();
 	}
 	
 	@Override public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
