@@ -59,14 +59,14 @@ public class JavaPatcher {
 	}
 	
 	
-	private static final Pattern CLASS_NAME_FINDER = Pattern.compile("^.*/patchedJavac/(.*)\\.class$");
+	private static final Pattern CLASS_NAME_FINDER = Pattern.compile("^.*[\\\\/]patchedJavac[\\\\/](.*)\\.class$");
 	
 	public static void premain(String agentArgs, Instrumentation instrumentation) throws Throwable {
 		InputStream in = JavaPatcher.class.getResourceAsStream("/replacements/classesToPatch_anyannotation.txt");
 		final List<String> classesToReplace = new ArrayList<String>();
 		for (String elem : new String(readFile(in), "US-ASCII").split("[:;]")) {
 			Matcher m = CLASS_NAME_FINDER.matcher(elem);
-			if (m.matches()) classesToReplace.add(m.group(1));
+			if (m.matches()) classesToReplace.add(m.group(1).replace("\\", "/"));
 		}
 		
 		class ReplaceClassesTransformer implements ClassFileTransformer {
