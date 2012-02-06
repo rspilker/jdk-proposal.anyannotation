@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html><head>
+	<title>Any Annotations Proposal for JDK8: How to experiment with this feature</title>
+</head><body>
+	<h1>Any Annotation Proposal for JDK8</h1>
+	<h2>What is it?</h2>
+		Currently (in JDK7), you can put annotations inside annotations, but you have to specify the exact type of annotation; there is no wildcard way
+		to say 'any annotation is fine'. For example, while you can do this in JDK7:
+		<pre>
+public @interface GeneratePersistencePojo {
+	Entity[] onClass() default {@Entity};
+}</pre>
+		To for example power an annotation processor that generates JPA compatible pojos. However, the ability to specify which annotations should be placed
+		on the generated class is here virtually useless; only annotations of the type <code>@Entity</code> are allowed. What we would like to say is something like:
+		<pre>
+public @interface GeneratePersistencePojo {
+	java.lang.annotation.Annotation[] onClass() default {@Entity};
+}</pre>
+		To indicate that any annotation is fine. This is, unfortunately, not legal in JDK7.
+	</p><p>
+		This proposal is just that: To let the above syntax be legal in JDK8.
+	</p>
+	<h2>Experimenting instructions</h2>
+	<p>
+		You can experiment with this feature yourself without having to recompile javac, the JDK, or even find a custom binary for your platform.
+	</p><p>
+		Just download the <a href="anyannotation.jar">anyannotation.jar</a> agent which will 'live patch', in memory, the Oracle/OpenJDK javac compiler.
+	</p>
+	<h3>Live-patching javac</h3>
+	<h4>Command Line</h4>
+	<p>
+		For example, to compile on the command line:
+		<pre>
+javac -J-javaagent:anyannotation.jar *.java</pre>
+		Note that you need a 1.7 javac for the agent to work.
+	</p><p>
+		You do not need to live-patch the JVM itself because all JVM-related code actually already supports this feature, with one exception:
+		A system assertion check will fail. Normally these system assertions are disabled, but if you are running <code>java</code> with the <code>-esa</code>
+		option, which turns on system assertions, this new feature will fail. The live agent does not address this oversight, although a fix is listed in the
+		patch record, which you can use if you can build the JVM from sources.
+	</p>
+	<h4>Ant</h4>
+	<p>
+		In ant:
+		<pre>
+&lt;javac fork="true" srcdir="${src}" destdir="${build}"&gt;
+	&lt;compilerarg value="-J-javaagent:anyannotation.jar" /&gt;
+&lt;/javac&gt;</pre>
+	</p>
+	<h4>Maven</h4>
+	<p>
+		In Maven:
+		<pre>
+&lt;project&gt
+  [...]
+    &lt;build&gt;
+      [...]
+        &lt;plugins&gt;
+          &lt;plugin&gt;
+            &lt;groupId&gt;org.apache.maven.plugins&lt;groupId&gt;
+            &lt;artifactId&gt;maven-compiler-plugin&lt;/artifactId&gt
+            &lt;version&gt;2.3.2&lt;/version&gt
+            &lt;configuration&gt;
+              &lt;compilerArgument&gt;-J-javaagent:anyannotation.jar&lt;/compilerArgument&gt
+            &lt;/configuration&gt;
+          &lt;/plugin&gt;
+        &lt;/plugins&gt;
+      [...]
+    &lt;/build&gt;
+  [...]
+&lt;/project&gt;</pre>
+	</p>
+	<h3>Building it yourself</h4>
+	<p>
+		Head on over to the <a href="http://github.com/rspilker/jdk-proposal.anyannotation">github project page</a> to download the sources via git,
+		then run <code>ant test</code> to build the project and run the tests.
+	</p>
+	<h3>The full proposal</h3>
+	<p>
+		The full proposal, including updates to the Java Language Specification and Java Virtual Machine Specification, as well as all patches required
+		to the OpenJDK itself (javax.lang.model, java.lang.reflect, and javac itself), and some discussion on impact, use cases, and compatibility issues,
+		can be found in <a href="anyannotation-full-proposal.md">markdown format</a> and <a href="anyannotation-full-proposal.html">html</a>.
+	</p>
+</body></html>
