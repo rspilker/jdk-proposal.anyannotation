@@ -80,8 +80,7 @@ function testReflection() {
 				TFAILED=$[TFAILED+1]
 			else
 				sed 's/\\/\//g' <"$BASENAME.compiler-result.actual" >"$BASENAME.compiler-result2.actual"
-				mv "$BASENAME.compiler-result2.actual" "$BASENAME.compiler-result.actual"
-				diff -qaiBwN "$BASENAME.compiler-result.actual" "$BASENAME.compiler-result.txt" >/dev/null
+				diff -qaiBwN "$BASENAME.compiler-result2.actual" "$BASENAME.compiler-result.txt" >/dev/null
 				if [ $? != 0 ]; then
 					echo " FAIL: Compiler errors appropriately but error message is incorrect."
 					echo "Expected error:"
