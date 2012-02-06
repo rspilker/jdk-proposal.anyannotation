@@ -109,7 +109,7 @@
 	</target>
 	
 	<target name="test" depends="patchedJavacCompile, dist" description="Runs test script. Requires posixy environment.">
-		<exec executable="/bin/bash" dir="test" osfamily="unix mac">
+		<exec executable="/bin/bash" dir="test" osfamily="unix">
 			<arg line="./runTests.sh" />
 		</exec>
 		<exec executable="bash" dir="test" osfamily="windows">
