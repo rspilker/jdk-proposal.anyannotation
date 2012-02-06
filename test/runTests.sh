@@ -142,7 +142,7 @@ function testJlModel() {
 		
 		echo -n "TESTING AnnotationNotOnClassPath..."
 		BASENAME="jlModel_extra/jlModel_extra/TestAnnotationNotOnClassPath"
-		"$JAVA_BASE/bin/javac" $1 -cp .:jlModel_extra -processorpath . -processor jlModel.AnnotationProcessor $BASENAME.java &>"$BASENAME.compiler-result.actual"
+		"$JAVA_BASE/bin/javac" $1 -cp . -implicit:none -sourcepath jlModel_extra -processorpath . -processor jlModel.AnnotationProcessor $BASENAME.java &>"$BASENAME.compiler-result.actual"
 		diff -qaiBwN "$BASENAME.compiler-result.actual" "$BASENAME.compiler-result.txt" >/dev/null
 		if [ $? -eq 0 ]; then
 			echo " OK"
@@ -184,12 +184,12 @@ SCRIPTFAIL=0
 sanityCheck || SCRIPTFAIL=1
 
 echo "TEST : java reflection : java7  : hg patch"
-testReflection "-J-Xbootclasspath/p:../patchedJavac:../lib/build/javac7.jar" "-javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
+testReflection "-J-Xbootclasspath/p:../lib/build/javac7.jar -J-Xbootclasspath/p:../patchedJavac" "-javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
 echo "TEST : java reflection : java7  : live agent"
 testReflection "-J-javaagent:../dist/anyannotation.jar" "-javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
 
 echo "TEST : java.lang.Model : javac7 : hg patch"
-testJlModel "-J-Xbootclasspath/p:../patchedJavac:../lib/build/javac7.jar" || SCRIPTFAIL=1
+testJlModel "-J-Xbootclasspath/p:../lib/build/javac7.jar -J-Xbootclasspath/p:../patchedJavac" || SCRIPTFAIL=1
 echo "TEST : java.lang.Model : javac7 : live agent"
 testJlModel "-J-javaagent:../dist/anyannotation.jar" || SCRIPTFAIL=1
 
