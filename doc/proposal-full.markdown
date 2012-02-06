@@ -1,5 +1,7 @@
 # The AnyAnnotation feature
 
+___v1.0___
+
 Currently, the JLS specifies that only a direct subtype of `java.lang.annotation.Annotation`, defined using the `public @interface` syntax, is actually an annotation type, and that the return type of any member of an annotation declaration can only be an annotation type (or a primitive, String, Class, or a 1-dimensional array). It is therefore not possible in java 1.7 to create a member of an annotation declaration that implies 'any annotation is legal here'.
 
 This proposal addresses the lack of this feature. It also moves java closer towards supporting hierarchical annotations (the ability to have one annotation declaration extend something other than `java.lang.annotation.Annotation` itself). In a nutshell, the proposed changes:
@@ -21,23 +23,15 @@ This proposal addresses the lack of this feature. It also moves java closer towa
 
 A special try-it-out javac agent is available here:
 
-[http://projectlombok.org/anyannotation/anyannotation.jar]()
+[http://projectlombok.org/anyannotation](http://projectlombok.org/anyannotation)
 
-which can be used to try this feature out. Take any recent javac and invoke it as usual, but add a parameter, like so:
-
-	javac -J-javaagent:anyannotation.jar *.java
-	
-For that execution run only, javac will include the suggested patches in this document. No patch is required to actually run the code produced by such a javac, unless you use the `-esa` option. In that case, the same agent will also fix `-esa`:
-
-	java -esa -javagent:anyannotation.jar com.package.MyClass
-
-This 'patcher' does not actually modify any of your system's files, it only patches the appropriate classes in memory.
+This agent 'live patches' any javac7 in memory only, so you can start experimenting right away with this feature.
 
 ## Changes required in the JDK and associated documentation
 
 ### JVM Specification: Zero changes required
 
-_Based on [http://docs.oracle.com/javase/7/specs/jvms/JVMS-JavaSE7.pdf]()_
+_Based on [Java Virtual Machine Specification SE7][JVMS]_
 
 1. For annotations themselves: Section 4.7.16 - **The RuntimeVisibleAnnotations attribute** through Section 4.7.19 - **The RuntimeInvisibleParameterAnnotations attribute** specify how annotations should be encoded in the class file. These sections say the only way to store an annotation inside an annotation is as a new annotation block, and such a block _includes_ the type of the annotation. Thus, in `@Foo(@Bar)`, there is always a pointer to the constant pool entry with `com.package.Bar`. It is therefore not necessary to rely on the signatures available in the `Foo` type to understand its parameter, and therefore no change is necessary to the class file format to support the case where `@Foo`'s parameter is of type `Annotation`.
 
@@ -45,7 +39,7 @@ _Based on [http://docs.oracle.com/javase/7/specs/jvms/JVMS-JavaSE7.pdf]()_
 
 ### JLS Specification: A few changes required
 
-_based on [http://docs.oracle.com/javase/7/specs/jls/JLS-JavaSE7.pdf]()_
+_based on [Java Language Specification SE7][JLS]_
 
 1. 9.6 - **Annotation Types** This introductory section describes the actual declaration of an annotation type; no changes needed.
 
@@ -184,7 +178,7 @@ the default value specified.
 
 3. `sun.reflect.annotation.AnnotationParser` - Minor changes necessary.
 
-_based on [http://hg.openjdk.java.net/jdk7/jdk7/jdk/file/9b8c96f96a0f/src/share/classes/sun/reflect/annotation/AnnotationParser.java]()_
+_based on [Revision 9b8c96f96a0f of AnnotationParser.java][AnnotationParser]_
 
 * method `parseMemberValue` does NOT provide the expected type (parameter `memberType`) to the `parseAnnotation` helper method. Therefore, the fact that expected type is a previously invalid value (`java.lang.annotation.Annotation`) does not have any effect on parsing the annotation in the class file data.
 
@@ -200,24 +194,171 @@ _based on [http://hg.openjdk.java.net/jdk7/jdk7/jdk/file/9b8c96f96a0f/src/share/
 * javac checks that an annotation declaration member's return type is one of the allowed types. This check needs to be extended to consider `java.lang.annotation.Annotation` a legal return type value as well. No change in the way javac builds the class file to represent the annotation declaration is required:
 
 In com.sun.tools.javac.comp.Check:2267
-_based on [http://hg.openjdk.java.net/jdk7/jdk7/langtools/file/ce654f4ecfd8/src/share/classes/com/sun/tools/javac/comp/Check.java]()_
+_based on [Revision ce654f4ecfd8 of Check.java][Check]_
 
 		- if ((type.tsym.flags() & Flags.ANNOTATION) != 0) {
 		+ if ((type.tsym.flags() & Flags.ANNOTATION) != 0 ||  || types.isSameType(type, syms.annotationType)) {
 
-* Loop detector [TODO]
+* Loop detection: It is now possible to create 'loops' in default values, where the default value of an annotation is itself, or, indirectly, some other annotation, one of whose methods contains a default value that points back itself. Prior to the introduction of this feature, the rule that the return types of annotation methods cannot contain a cyclic reference would make it impossible for the default value to contain such a loop, but now this is no longer true, so a separate loop detection scheme needs to be implemented for default values.
+
+NB: The `checkAnnotationResType` method has been renamed in this patch to `checkAnnotationElementType` because it is now no longer used just to check return types, but also to check the types in a `default` value.
+
+This change is a bit more involved and thus the full patch is listed here in posix diff format:
+
+Full patch of com.sun.tools.javac.comp.Check:
+_based on [Revision ce654f4ecfd8 of Check.java][Check]_
+
+	29d28
+	< import java.util.Set;
+	33a33,34
+	> import com.sun.tools.javac.tree.JCTree.JCAnnotation;
+	> import com.sun.tools.javac.tree.JCTree.JCExpression;
+	38a40
+	> import com.sun.tools.javac.code.Attribute.Array;
+	40a43
+	> import com.sun.tools.javac.code.Type;
+	2267c2270
+	<         if ((type.tsym.flags() & Flags.ANNOTATION) != 0) return;
+	---
+	>         if ((type.tsym.flags() & Flags.ANNOTATION) != 0 || types.isSameType(type, syms.annotationType)) return;
+	2497c2500,2501
+	<                 checkAnnotationResType(meth.pos(), meth.restype.type);
+	---
+	>                 checkAnnotationElementType(meth.pos(), meth.restype.type);
+	>                 checkNonCyclicAnnotationDefaultValues(meth);
+	2518c2522,2523
+	<                 checkAnnotationResType(pos, ((MethodSymbol)s).type.getReturnType());
+	---
+	>                 checkAnnotationElementType(pos, ((MethodSymbol)s).type.getReturnType());
+	>                 checkNonCyclicAnnotationDefaultValues(pos, (MethodSymbol)s);
+	2526c2531
+	<     void checkAnnotationResType(DiagnosticPosition pos, Type type) {
+	---
+	>     void checkAnnotationElementType(DiagnosticPosition pos, Type type) {
+	2533c2538
+	<             checkAnnotationResType(pos, types.elemtype(type));
+	---
+	>             checkAnnotationElementType(pos, types.elemtype(type));
+	2539a2545,2579
+	>     private void checkNonCyclicAnnotationDefaultValues(JCMethodDecl meth) {
+	>         if (!isAnnotationType(meth.restype.type)) return;
+	>         if (meth.defaultValue == null) return;
+	>         meth.defaultValue.accept(new TreeScanner() {
+	>             @Override public void visitAnnotation(JCAnnotation tree) {
+	>                 checkAnnotationElementType(tree.pos(), tree.type);
+	>                 super.visitAnnotation(tree);
+	>             }
+	>         });
+	>     }
+	> 
+	>     private void checkNonCyclicAnnotationDefaultValues(final DiagnosticPosition pos, MethodSymbol meth) {
+	>         if (!isAnnotationType(meth.type.getReturnType())) return;
+	>         if (meth.defaultValue == null) return;
+	>         if (meth.defaultValue.type.tag == TypeTags.ARRAY) {
+	>             for (Attribute a : ((Array)meth.defaultValue).values) {
+	>                 checkAnnotationElementType(pos, a.type);
+	>             }
+	>         }
+	>         else {
+	>             checkAnnotationElementType(pos, meth.defaultValue.type);
+	>         }
+	>     }
+	> 
+	>     private boolean isAnnotationType(Type type) {
+	>         switch (type.tag) {
+	>         case TypeTags.CLASS:
+	>             return types.isSameType(type, syms.annotationType);
+	>         case TypeTags.ARRAY:
+	>             return types.isSameType(types.elemtype(type), syms.annotationType);
+	>         default:
+	>             return false;
+	>         }
+	>     }
+	>
 
 * The error message with key 'cyclic.annotation.element' doesn't need changing.
 
 * javac checks that an annotation's parameter is type compatible with the annotation's declaration. It does this using an 'assignment compatible' check, which will work fine with `java.lang.annotation.Annotation` as return type of the annotation declaration member method. However, this check is entered using an `if` statement which needs to be expanded:
 
 In com.sun.tools.javac.comp.Annotate:224
-_based on [http://hg.openjdk.java.net/jdk7/jdk7/langtools/file/ce654f4ecfd8/src/share/classes/com/sun/tools/javac/comp/Annotate.java]()_
+_based on [Revision ce654f4ecfd8 of Annotate.java][Annotate]_
 
 		- if ((expected.tsym.flags() & Flags.ANNOTATION) != 0) {
 		+ if ((expected.tsym.flags() & Flags.ANNOTATION) != 0 || types.isSameType(expected, syms.annotationType)) {
 
 * No other changes are required. The error message with key `invalid.annotation.member.type` may need to be expanded to explain that `Annotation` is also a legal type.
+
+### Changes to javax.lang.model: Many changes needed
+
+* javax.lang.model mostly requires no changes, except for the feature where one can ask javax.lang.model to create an instance of a given annotation class, i.e.:
+
+	for (Element elem : roundEnv.getRootElements()) {
+		SomeAnnotation instanceOfAnnotation = elem.getAnnotation(SomeAnnotation.class);
+	}
+
+The implementation of this feature on OpenJDK's javac obtains `java.lang.Class` instances (needed to create the proxies) entirely from traversing `SomeAnnotation.class` using reflection. As the return types of the methods in `SomeAnnotation.class` would be `java.lang.annotation.Annotation`, this mechanism is no longer useful. Instead, the 'flat name' of the annotation argument itself needs to be turned into a `java.lang.Class` by using `Class.forName()`. Also, it is now possible for an annotation argument to contain an annotation that is not on the classpath of the annotation processor. The right approach is for this annotation instance to throw a `TypeMirrorException` as late as is feasible (when the annotation method is invoked that would have to return an instance of a type that is not available, but not when i.e. `toString()` is invoked). A full patch to the appropriate class is listed here:
+
+In com.sun.tools.javac.model.AnnotationProxyMaker
+_based on [Revision ce654f4ecfd8 of AnnotationProxyMaker.java][AnnotationProxyMaker]_
+
+	62c62,64
+	<     private final Class<? extends Annotation> annoType;
+	---
+	>     private Class<? extends Annotation> annoType;
+	>     private final Class<?> context;
+	>     private ClassLoader classLoader;
+	66c68
+	<                                  Class<? extends Annotation> annoType) {
+	---
+	>                                  Class<? extends Annotation> annoType, Class<?> context) {
+	68a71
+	>         this.context = context;
+	77,78c80
+	<         AnnotationProxyMaker apm = new AnnotationProxyMaker(anno, annoType);
+	<         return annoType.cast(apm.generateAnnotation());
+	---
+	>         return annoType.cast(generateAnnotationInner(anno, annoType, annoType, null));
+	80a83,88
+	>     private static Object generateAnnotationInner(
+	>             Attribute.Compound anno, Class<? extends Annotation> annoType, Class<?> context, ClassLoader classLoader) {
+	>         AnnotationProxyMaker apm = new AnnotationProxyMaker(anno, annoType, context);
+	>         apm.classLoader = classLoader;
+	>         return apm.generateAnnotation();
+	>     }
+	81a90,100
+	>     private ClassLoader getAnnotationClassLoader() {
+	>         if (classLoader == null) {
+	>             ClassLoader cl = context.getClassLoader();
+	>             // Line above Could cause security exception, but
+	>             // no other part of javac uses doPrivileged;
+	>             // in particular line 259 of AnnotationParser also doesn't bother,
+	>             // and is in the same boat.
+	>            this.classLoader = cl != null ? cl : ClassLoader.getSystemClassLoader();
+	>         }
+	>         return classLoader;
+	>     }
+	85c104,116
+	<     private Annotation generateAnnotation() {
+	---
+	>     @SuppressWarnings("unchecked")
+	>     private Object generateAnnotation() {
+	>         if (annoType == Annotation.class) {
+	>             try {
+	>                 Class<? extends Annotation> clazz = (Class<? extends Annotation>)
+	>                         getAnnotationClassLoader().loadClass(anno.type.tsym.flatName().toString());
+	>                 annoType = clazz;
+	>                 return AnnotationParser.annotationForMap(clazz,
+	>                         getAllReflectedValues());
+	>             } catch (ClassNotFoundException e) {
+	>                 return new MirroredTypeExceptionProxy(anno.type);
+	>             }
+	>         }
+	170a202
+	>             
+	239c271
+	<                 value = generateAnnotation(c, nested);
+	---
+	>                 value = generateAnnotationInner(c, nested, context, classLoader);
 
 ## Source and binary compatibility
 
@@ -240,35 +381,16 @@ One obvious use case for annotations is generating code. If this feature is adde
 
 This feature also takes a step towards allowing hierarchical annotation definitions (where an annotation extends another annotation type, instead of `java.lang.annotation.Annotation`).
 
-## Known issues
+## Testing the feature
 
-With the following construct:
+These patches, plus a test suite as well as a way to build a 'live patching agent' which allows experimenting with these patches, are available here:
 
-	@Retention(RetentionPolicy.RUNTIME)
-	public @interface Foo {
-		Annotation value() default @Foo;
-	}
-	
-	@Foo class Test {
-		public static void main(String[] args) {
-			Foo x = Test.class.getAnnotation(Foo.class);
-			x.value(); //stack overflow
-		}
-	}
+* [github repository](http://github.com/rspilker/jdk-proposal.anyannotation) - source repository
+* [live agent](http://projectlombok.org/anyannotation) - direct download of the agent which allows immediate experimentation with any javac7.
 
-The indicated line causes an endless loop when 'Test' is executed (no issues when compiling this code) which eventually terminates once the stack overflows, because the reflection core will continue to synthesize new proxy instances of `Foo` with a default value, which never ends. Prior to this proposal, it couldn't happen because the spec explicitly disallows cycles in the return types of any members of an annotation declaration. (Section 9.6.1).
-
-We're working on including a patch to fix this bug.
-
-The fix is to specify that the default value also may not contain such loops, and to add a check for such a loop in javac.
-
-This alternate example of a loop does not cause any issues, and we propose that the spec does not disallow this usage:
-
-	public @interface Foo {
-		Annotation value() default @Override;
-	}
-	
-	@Foo(@Foo(@Foo(@Foo()))) //acceptable
-	class Test {}
-
-However, we recognize that this may warrant a closer look.
+[JVMS]: http://docs.oracle.com/javase/7/specs/jvms/JVMS-JavaSE7.pdf
+[JLS]: http://docs.oracle.com/javase/7/specs/jls/JLS-JavaSE7.pdf
+[AnnotationParser]: http://hg.openjdk.java.net/jdk7/jdk7/jdk/file/9b8c96f96a0f/src/share/classes/sun/reflect/annotation/AnnotationParser.java
+[Check]: http://hg.openjdk.java.net/jdk7/jdk7/langtools/file/ce654f4ecfd8/src/share/classes/com/sun/tools/javac/comp/Check.java
+[Annotate]: http://hg.openjdk.java.net/jdk7/jdk7/langtools/file/ce654f4ecfd8/src/share/classes/com/sun/tools/javac/comp/Annotate.java
+[AnnotationProxyMaker]: http://hg.openjdk.java.net/jdk7/jdk7/langtools/file/ce654f4ecfd8/src/share/classes/com/sun/tools/javac/model/AnnotationProxyMaker.java
