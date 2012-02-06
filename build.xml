@@ -215,4 +215,16 @@
 			<arg line="build/original/com/sun/tools/javac/model/AnnotationProxyMaker.java patchedJavac/com/sun/tools/javac/model/AnnotationProxyMaker.java" />
 		</exec>
 	</target>
+	<target name="createJrePatch" description="Creates a patch file for the JRE">
+		<mkdir dir="build/original/sun/reflect/annotation/"/>
+		<mkdir dir="build/patch/annotation/"/>
+		<get 
+			src="http://hg.openjdk.java.net/jdk7/jdk7/jdk/raw-file/00cd9dc3c2b5/src/share/classes/sun/reflect/annotation/AnnotationParser.java"
+			dest="build/original/sun/reflect/annotation/"
+			skipexisting="true"
+		/>
+		<exec executable="diff" output="build/patch/annotation/AnnotationParser.patch">
+			<arg line="build/original/sun/reflect/annotation/AnnotationParser.java patchedJre/sun/reflect/annotation/AnnotationParser.java" />
+		</exec>
+	</target>
 </project>
