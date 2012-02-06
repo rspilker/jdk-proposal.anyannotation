@@ -482,7 +482,7 @@ public class AnnotationParser {
             return parseEnumArray(length, (Class<? extends Enum>)componentType, buf,
                                   constPool, container);
         } else {
-            assert componentType.isAnnotation();
+            assert componentType.isAnnotation() || componentType == Annotation.class;
             return parseAnnotationArray(length, (Class <? extends Annotation>)componentType, buf,
                                         constPool, container);
         }
