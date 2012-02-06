@@ -109,7 +109,10 @@
 	</target>
 	
 	<target name="test" depends="patchedJavacCompile, dist" description="Runs test script. Requires posixy environment.">
-		<exec executable="/bin/bash" dir="test">
+		<exec executable="/bin/bash" dir="test" osfamily="unix mac">
+			<arg line="./runTests.sh" />
+		</exec>
+		<exec executable="bash" dir="test" osfamily="windows">
 			<arg line="./runTests.sh" />
 		</exec>
 	</target>
@@ -132,7 +135,6 @@
 		</copy>
 		<property name="filesToPatch.txt" refid="filesToPatch" />
 		<echo file="build/replacements/replacements/classesToPatch_anyannotation.txt">${filesToPatch.txt}</echo>
-		<taskdef name="jarjar" classname="com.tonicsystems.jarjar.JarJarTask" classpath="lib/build/jarjar.jar" />
 		<jar destfile="dist/anyannotation.jar">
 			<fileset dir=".">
 				<include name="README*" />
